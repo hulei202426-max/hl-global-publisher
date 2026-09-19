@@ -1,11 +1,291 @@
-<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>(HL)全球发布</title><style>*{box-sizing:border-box}body{margin:0;font:15px system-ui,Arial;background:#f3f6fb;color:#18243b}header{background:#111d32;color:white;padding:20px 5%;display:flex;justify-content:space-between;align-items:center}main{max-width:1050px;margin:30px auto;padding:0 18px}.panel{background:white;border:1px solid #dfe5ef;border-radius:15px;padding:22px;margin-bottom:18px}h1{font-size:24px}h2{font-size:19px;margin-top:0}label{display:block;margin:12px 0 5px}input,textarea,select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}button{background:#285be8;color:white;border:0;padding:11px 17px;border-radius:8px;cursor:pointer;margin:7px 5px 7px 0}button:disabled{opacity:.5;cursor:not-allowed}.muted{color:#64748b}.status{color:#b45309}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px}.chip{border:1px solid #dce2ee;padding:10px;border-radius:9px}pre{white-space:pre-wrap;word-break:break-word;background:#f1f5f9;padding:12px;border-radius:8px}nav button{background:#34425c}.hidden{display:none}small{color:#64748b}</style></head><body><header><strong>▶ (HL)全球发布 <small> / Global Publisher</small></strong><button id="lang">English</button></header><main><section class="panel"><h1 data-zh="受保护的单管理员在线测试版" data-en="Protected single-admin online test build">受保护的单管理员在线测试版</h1><p class="muted" data-zh="真实上传和任务存储已接入。五个平台尚未授权，不会真实发布。仅供私有测试，尚未开放客户注册。" data-en="Real upload and task storage are enabled. All five providers are disconnected; no real posting occurs. Private testing only; customer sign-up is not available.">真实上传和任务存储已接入。五个平台尚未授权，不会真实发布。仅供私有测试，尚未开放客户注册。</p><label data-zh="管理员令牌（仅保存在当前页面内存）" data-en="Admin token (held only in page memory)">管理员令牌（仅保存在当前页面内存）</label><input type="password" id="token" autocomplete="off" placeholder="APP_ADMIN_TOKEN"><button id="load" data-zh="连接后端 / 刷新" data-en="Connect / refresh">连接后端 / 刷新</button><div id="message" role="status"></div></section><section class="panel"><h2 data-zh="社交平台 / Accounts" data-en="Social accounts">社交平台 / Accounts</h2><div id="accounts" class="grid"></div></section><section class="panel"><h2 data-zh="1. 上传真实视频" data-en="1. Upload a real video">1. 上传真实视频</h2><input type="file" id="file" accept="video/mp4,video/quicktime,video/webm"><button id="upload" data-zh="上传视频" data-en="Upload video">上传视频</button><p class="muted" data-zh="最大 250 MiB；MP4 / MOV / WebM。开发版仅检查基本文件签名。" data-en="Max 250 MiB; MP4 / MOV / WebM. Development build performs basic signature validation only.">最大 250 MiB；MP4 / MOV / WebM。开发版仅检查基本文件签名。</p><div id="media"></div></section><section class="panel"><h2 data-zh="2. 创建发布任务" data-en="2. Create a publishing job">2. 创建发布任务</h2><label data-zh="选择已上传视频" data-en="Select uploaded video">选择已上传视频</label><select id="mediaSelect"></select><label data-zh="标题" data-en="Title">标题</label><input id="title" maxlength="200"><label data-zh="文案" data-en="Caption">文案</label><textarea id="caption" maxlength="5000" rows="3"></textarea><label data-zh="选择目标平台（未授权仍可创建阻塞任务）" data-en="Choose platforms (unconnected targets will be blocked)">选择目标平台（未授权仍可创建阻塞任务）</label><div id="platforms" class="grid"></div><label data-zh="计划时间（留空表示立即进入队列；使用浏览器本地时区）" data-en="Schedule (blank queues immediately; browser local timezone)">计划时间（留空表示立即进入队列；使用浏览器本地时区）</label><input type="datetime-local" id="when"><button id="create" data-zh="创建任务" data-en="Create job">创建任务</button></section><section class="panel"><h2 data-zh="3. 发布任务与状态" data-en="3. Jobs and status">3. 发布任务与状态</h2><button id="refresh" data-zh="刷新任务" data-en="Refresh jobs">刷新任务</button><div id="jobs"></div></section></main><script src="/static/app.js" defer>--><!--
-let english=false, token=''; const names=['tiktok','youtube','instagram','facebook','linkedin'];
-const $=id=>document.getElementById(id);const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function msg(s){$('message').textContent=s}function translate(){document.documentElement.lang=english?'en':'zh';document.querySelectorAll('[data-zh]').forEach(e=>e.textContent=e.dataset[english?'en':'zh']);$('lang').textContent=english?'中文':'English'}
-async function api(path,opts={}){if(!token)throw Error(english?'Enter your admin token first':'请先填写管理员令牌');const res=await fetch('/api'+path,{...opts,headers:{'X-Admin-Token':token,...(opts.headers||{})}});if(!res.ok){let text=await res.text();throw Error(res.status+' '+text)}return res.json()}
-async function refresh(){try{const [a,m,j]=await Promise.all([api('/accounts'),api('/media'),api('/jobs')]);$('accounts').innerHTML=a.map(x=>`<div class="chip"><b>${esc(x.platform)}</b><p class="status">${english?'Disconnected':'未连接'} (${esc(x.status)})</p></div>`).join('');$('media').innerHTML=m.map(x=>`<div class="chip">${esc(x.name)} · ${(x.size/1048576).toFixed(1)} MiB <button data-download="${esc(x.id)}">${english?'Download':'下载'}</button></div>`).join('')||'<p class="muted">No media / 暂无素材</p>';$('mediaSelect').innerHTML=m.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');$('jobs').innerHTML=j.map(x=>`<div class="chip"><b>${esc(x.title)}</b> · ${esc(x.status)}<p>${esc(x.scheduled_at)}</p>${x.targets.map(t=>`<div>${esc(t.platform)}: <span class="status">${esc(t.status)}</span> · ${esc(t.error)}</div>`).join('')}${x.status==='scheduled'?`<button data-cancel="${esc(x.id)}">${english?'Cancel':'取消任务'}</button>`:''}</div>`).join('')||'<p class="muted">No jobs / 暂无任务</p>';msg(english?'Connected to backend':'已连接后端')}catch(e){msg(e.message)}}
-$('platforms').innerHTML=names.map(p=>`<label class="chip"><input style="width:auto" type="checkbox" name="platform" value="${p}" checked> ${p}</label>`).join('');$('lang').onclick=()=>{english=!english;translate();if(token)refresh()};$('load').onclick=()=>{token=$('token').value;refresh()};$('refresh').onclick=refresh;
-$('upload').onclick=async()=>{try{const file=$('file').files[0];if(!file)throw Error('Choose a file / 请选择文件');const body=new FormData();body.append('file',file);const m=await api('/media',{method:'POST',body});msg('Uploaded / 上传成功: '+m.name);await refresh()}catch(e){msg(e.message)}};
-$('create').onclick=async()=>{try{const platforms=[...document.querySelectorAll('input[name="platform"]:checked')].map(e=>e.value);const when=$('when').value;const body={media_id:$('mediaSelect').value,title:$('title').value,caption:$('caption').value,platforms,scheduled_at:when?new Date(when).toISOString():null};const j=await api('/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});await refresh();msg('Created / 已创建: '+j.id+' — no social media publication has occurred / 未发布到社交媒体')}catch(e){msg(e.message)}};
-$('jobs').onclick=async e=>{const id=e.target.dataset.cancel;if(id){try{await api('/jobs/'+id+'/cancel',{method:'POST'});await refresh()}catch(err){msg(err.message)}}};$('media').onclick=async e=>{const id=e.target.dataset.download;if(!id)return;try{const r=await fetch('/api/media/'+id+'/download',{headers:{'X-Admin-Token':token}});if(!r.ok)throw Error('Download failed');const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='video';a.click();URL.revokeObjectURL(url)}catch(err){msg(err.message)}};translate();
---></body></html>
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>(HL)全球发布 / Global Publisher</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font:15px system-ui,Arial;
+background:#f3f6fb;
+color:#18243b
+}
+
+header{
+background:#111d32;
+color:white;
+padding:20px 5%;
+display:flex;
+justify-content:space-between;
+align-items:center
+}
+
+main{
+max-width:1050px;
+margin:30px auto;
+padding:0 18px
+}
+
+.panel{
+background:white;
+border:1px solid #dfe5ef;
+border-radius:15px;
+padding:22px;
+margin-bottom:18px
+}
+
+h1{font-size:24px}
+h2{font-size:19px}
+
+label{
+display:block;
+margin:12px 0 5px
+}
+
+input,textarea,select{
+width:100%;
+padding:11px;
+border:1px solid #cbd5e1;
+border-radius:8px;
+font:inherit
+}
+
+button{
+background:#285be8;
+color:white;
+border:0;
+padding:11px 17px;
+border-radius:8px;
+cursor:pointer;
+margin:7px 5px 7px 0
+}
+
+button:hover{
+opacity:.85
+}
+
+.muted{
+color:#64748b
+}
+
+.status{
+color:#b45309
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+gap:10px
+}
+
+.chip{
+border:1px solid #dce2ee;
+padding:10px;
+border-radius:9px
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+<strong>
+▶ (HL)全球发布
+<small>/ Global Publisher</small>
+</strong>
+
+<button id="lang">
+English
+</button>
+
+</header>
+
+
+
+<main>
+
+
+<section class="panel">
+
+<h1>
+受保护的单管理员在线测试版
+</h1>
+
+
+<p class="muted">
+
+真实上传和任务存储已接入。
+五个平台尚未授权，不会真实发布。
+仅供私有测试。
+
+</p>
+
+
+<label>
+管理员令牌
+</label>
+
+
+<input 
+type="password"
+id="token"
+placeholder="APP_ADMIN_TOKEN"
+>
+
+
+<button id="load">
+连接后端 / 刷新
+</button>
+
+
+<div id="message"></div>
+
+
+</section>
+
+
+
+
+<section class="panel">
+
+<h2>
+社交平台 / Accounts
+</h2>
+
+
+<div id="accounts" class="grid">
+
+</div>
+
+
+</section>
+
+
+
+
+<section class="panel">
+
+
+<h2>
+1. 上传真实视频
+</h2>
+
+
+<input 
+type="file"
+id="file"
+accept="video/mp4,video/quicktime,video/webm"
+>
+
+
+<button id="upload">
+上传视频
+</button>
+
+
+<div id="media"></div>
+
+
+</section>
+
+
+
+
+<section class="panel">
+
+
+<h2>
+2. 创建发布任务
+</h2>
+
+
+<select id="mediaSelect">
+
+</select>
+
+
+<label>
+标题
+</label>
+
+<input id="title">
+
+
+<label>
+文案
+</label>
+
+
+<textarea id="caption"></textarea>
+
+
+
+<label>
+选择平台
+</label>
+
+
+<div id="platforms" class="grid">
+
+</div>
+
+
+
+<input 
+type="datetime-local"
+id="when"
+>
+
+
+
+<button id="create">
+创建任务
+</button>
+
+
+</section>
+
+
+
+
+<section class="panel">
+
+
+<h2>
+3. 发布任务状态
+</h2>
+
+
+<button id="refresh">
+刷新任务
+</button>
+
+
+<div id="jobs">
+
+</div>
+
+
+</section>
+
+
+
+</main>
+
+
+
+<script src="/static/app.js" defer></script>
+
+
+</body>
+
+</html>
